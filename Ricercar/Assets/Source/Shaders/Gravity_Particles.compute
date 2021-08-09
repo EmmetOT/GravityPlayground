@@ -1,0 +1,165 @@
+﻿#ifndef GRAVITY_PARTICLES_INCLUDED
+#define GRAVITY_PARTICLES_INCLUDED
+
+#pragma kernel InitializePool
+#pragma kernel AddEmittedParticles
+#pragma kernel ResetMinMax
+#pragma kernel UpdateParticles
+#pragma kernel CreateParticleSortBuffers
+
+#define RW_PARTICLE_COUNT_DATA
+#define BOUNCE_AGE_SCALAR 100.0
+
+#include "./Gravity_Common.hlsl"
+#include "./Gravity_Particles_Includes.hlsl"
+
+// buffer of all particles, each obviously have their own unique index
+// each particle knows whether or not it's alive
+// when a particle dies, we set it to not alive and append its index to the pool
+
+AppendStructuredBuffer<uint> _GravityParticlesPool_Append;
+ConsumeStructuredBuffer<uint> _GravityParticlesPool_Consume;
+
+// this buffer is cleared every frame (on cpu side)
+AppendStructuredBuffer<ParticleSortKey> _ActiveParticlesThisFrame_Append;
+
+StructuredBuffer<GravityParticle> _EmittedParticles_Structured;
+
+RWStructuredBuffer<GravityParticle> _GravityParticles_Structured;
+
+float _DeltaTime;
+uint _MaxParticles;
+
+// dispatch for every possible particle
+[numthreads(64, 1, 1)]
+void InitializePool(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _MaxParticles)
+        return;
+    
+    _GravityParticles_Structured[id.x].IsAlive = 0;
+    _GravityParticlesPool_Append.Append(id.x);
+}
+
+// dispatch for every new emitted particle
+[numthreads(1, 1, 1)]
+void AddEmittedParticles(uint3 id : SV_DispatchThreadID)
+{
+    // retrieve the index of the "unclaimed" slots, 
+    // and set the particle at that slot to the given value
+    
+    uint freeSpot = _GravityParticlesPool_Consume.Consume();
+    
+    GravityParticle particle = _EmittedParticles_Structured[id.x];
+    particle.IsAlive = 1;
+    particle.Age = 0.0;
+    
+    _GravityParticles_Structured[freeSpot] = particle;
+    
+    InterlockedAdd(ACTIVE_PARTICLES, 1);
+}
+
+[numthreads(1, 1, 1)]
+void ResetMinMax(uint3 id : SV_DispatchThreadID)
+{
+    MIN_PARTICLE_INDEX = 100000000;
+    MAX_PARTICLE_INDEX = 0;
+}
+
+// dispatch for every possible particle
+[numthreads(256, 1, 1)]
+void UpdateParticles(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _MaxParticles)
+        return;
+    
+    GravityParticle particle = _GravityParticles_Structured[id.x];
+    
+    if (particle.IsAlive == 0)
+        return;
+    
+    InterlockedMin(MIN_PARTICLE_INDEX, id.x);
+    InterlockedMax(MAX_PARTICLE_INDEX, id.x);
+    
+    GravityData closestBody;
+    float3 gravityAndSignedDistance = Map(particle.Position, closestBody);
+    float2 gravity = gravityAndSignedDistance.xy;
+    float signedDistance = gravityAndSignedDistance.z;
+    
+    // todo: cache this? currently calculating both here and in the shader proper
+    float currentRadius = particle.CurrentRadius();
+    
+    if (particle.Age > 2.0 && signedDistance < currentRadius)
+    {
+        // if particle is inside a gravity body
+
+        float rand = saturate(hash(id.x + particle.Position.x + particle.Velocity.y));
+        
+        if (closestBody.Bounciness > 0 && rand < particle.BounceChance && length(particle.Velocity) > 0.1)
+        {
+            // particle bounces
+            float2 gradient = MapGradient(particle.Position);
+            float2 ref = reflect(normalize(particle.Velocity), normalize(gradient));
+        
+            float2 nextVelocity = length(particle.Velocity) * ref * closestBody.Bounciness;
+            float2 nextPosition = /*(gradient * signedDistance * 1.1) +*/ particle.Position + nextVelocity * _DeltaTime;
+    
+            particle.Velocity = nextVelocity;
+            particle.Position = nextPosition;
+            particle.Age += _DeltaTime * BOUNCE_AGE_SCALAR; // age faster when bouncing
+        
+            ParticleSortKey sortKey;
+            sortKey.Index = id.x;
+            sortKey.SortKey = particle.SortKey + id.x;
+            
+            _ActiveParticlesThisFrame_Append.Append(sortKey);
+        }
+        else
+        {
+            // particle is destroyed
+            particle.IsAlive = 0;
+            _GravityParticlesPool_Append.Append(id.x);
+        
+            InterlockedAdd(ACTIVE_PARTICLES, -1);
+        }
+    }
+    else if (particle.Age >= particle.Duration)
+    {
+        // if particle dies of old age :'(
+        particle.IsAlive = 0;
+        _GravityParticlesPool_Append.Append(id.x);
+        
+        InterlockedAdd(ACTIVE_PARTICLES, -1);
+    }
+    else
+    {
+        float2 nextVelocity = particle.Velocity + (gravity * _DeltaTime / particle.Mass);
+        float2 nextPosition = particle.Position + nextVelocity * _DeltaTime;
+    
+        particle.Velocity = nextVelocity;
+        particle.Position = nextPosition;
+        particle.Age += _DeltaTime;
+        
+        ParticleSortKey sortKey;
+        sortKey.Index = id.x;
+        sortKey.SortKey = particle.SortKey + id.x;
+            
+        _ActiveParticlesThisFrame_Append.Append(sortKey);
+    }
+    
+    _GravityParticles_Structured[id.x] = particle;
+}
+
+[numthreads(256, 1, 1)]
+void CreateParticleSortBuffers(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= ACTIVE_PARTICLES)
+        return;
+    
+    ParticleSortKey sortKey = _ActiveParticlesThisFrame_Structured[id.x];
+    _ParticleIndexValues[id.x] = (int) sortKey.Index;
+    _ParticleIndexKeys[id.x] = sortKey.SortKey;
+
+}
+
+#endif // GRAVITY_PARTICLES_INCLUDED

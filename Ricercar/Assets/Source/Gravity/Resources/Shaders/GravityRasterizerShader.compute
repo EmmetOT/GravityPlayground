@@ -1,0 +1,204 @@
+﻿#include "./GravityShaderResources.cginc"
+#pragma kernel CalculateMassDistribution
+#pragma kernel GenerateGravityMap
+
+#define MULTIPLICATION_FACTOR 10000.0
+#define G 667.4
+#define EPSILON 0.00001
+
+static int2 Neighbours[8] =
+{
+    int2(-1, -1),
+    int2(0, -1),
+    int2(1, -1),
+    int2(-1, 0),
+    int2(1, 0),
+    int2(-1, 1),
+    int2(0, 1),
+    int2(1, 1)
+};
+
+Texture2D<float4> _InputTexture;
+float2 _InputTextureSize;
+
+RWTexture2D<float4> _OutputTexture;
+float2 _OutputTextureSize;
+RWStructuredBuffer<float3> _OutputForces;
+
+AppendStructuredBuffer<float2> _GravityParticles_AppendBuffer;
+AppendStructuredBuffer<float2> _EdgeParticles_AppendBuffer;
+StructuredBuffer<float2> _GravityParticles_StructuredBuffer;
+StructuredBuffer<float2> _EdgeParticles_StructuredBuffer;
+RWStructuredBuffer<uint> _CountBuffer;
+
+float _Padding;
+
+#define TOTAL_MASS _CountBuffer[0]
+#define CENTRE_OF_MASS_X  _CountBuffer[1]
+#define CENTRE_OF_MASS_Y  _CountBuffer[2]
+#define GRAVITY_PARTICLES_COUNT _CountBuffer[3]
+#define EDGE_PARTICLES_COUNT _CountBuffer[4]
+
+int CoordinateToIndex(int x, int y)
+{
+    return (x + y * _OutputTextureSize.y);
+}
+
+bool IsCoordinateEdge(uint2 coordinate)
+{
+    float4 texel = _InputTexture[coordinate];
+    bool isEdge = false;
+    
+    if (texel.a > 0)
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            int2 neighbourOffset = Neighbours[i];
+            int2 neighbourCoordinate = coordinate + neighbourOffset;
+            
+            if (neighbourCoordinate.x < 0 || neighbourCoordinate.y < 0 || neighbourCoordinate.x >= _InputTextureSize.x || neighbourCoordinate.y >= _InputTextureSize.y)
+            {
+                isEdge = true;
+                break;
+            }
+            else
+            {
+                float4 neighbour = _InputTexture[neighbourCoordinate];
+                bool isNeighbourEmpty = neighbour.a <= 0.0;
+                
+                if (isNeighbourEmpty)
+                {
+                    isEdge = true;
+                    break;
+                }
+            }
+        }
+    }
+    
+    return isEdge;
+}
+
+[numthreads(8, 8, 1)]
+void CalculateMassDistribution(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint) _InputTextureSize.x || id.y >= (uint) _InputTextureSize.y)
+        return;
+    
+    // just count up all the "mass" in the image (the sum of all the alpha values)
+
+    float4 texel = _InputTexture[id.xy];
+    
+    if (texel.a > 0)
+    {
+        _GravityParticles_AppendBuffer.Append(float2(id.x, id.y));
+        
+        InterlockedAdd(TOTAL_MASS, (int) (texel.a * MULTIPLICATION_FACTOR));
+        InterlockedAdd(GRAVITY_PARTICLES_COUNT, 1);
+        
+        if (IsCoordinateEdge(id.xy))
+        {
+            _EdgeParticles_AppendBuffer.Append(float2(id.x, id.y));
+            InterlockedAdd(EDGE_PARTICLES_COUNT, 1);
+        }
+    }
+}
+
+float2 CalculateGravity(float2 to, float2 from, float mass)
+{
+    // adding a tiny number prevents NaN
+    float2 difference = (to - from) + EPSILON;
+    float2 direction = normalize(difference);
+    float sqrMagnitude = dot(difference, difference);
+
+    float forceMagnitude = (G * mass) / sqrMagnitude;
+    return (direction * forceMagnitude);
+}
+
+float2 NormalizePosition(float2 position, float2 textureSize, float padding)
+{
+    position += padding;
+    return float2(position.x / (textureSize.x - 1.0), position.y / (textureSize.y - 1.0));
+}
+
+[numthreads(8, 8, 1)]
+void GenerateGravityMap(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint) _OutputTextureSize.x || id.y >= (uint) _OutputTextureSize.y)
+        return;
+    
+    float totalMass = (float) TOTAL_MASS / MULTIPLICATION_FACTOR;
+    float2 totalGravityForce = float2(0, 0);
+    
+    float2 normalizedCoordinate = NormalizePosition(id.xy, _OutputTextureSize, 0);
+    
+    // _GravityParticles_StructuredBuffer is a buffer which contains the coordinates of each
+    // occupied (alpha nonzero) texel in the input texture. this is faster than iterating over every single
+    // pixel, since most will be empty
+    for (uint i = 0; i < GRAVITY_PARTICLES_COUNT; i++)
+    {
+        float2 particleCoordinate = _GravityParticles_StructuredBuffer[i];
+        float2 normalizedParticleCoordinate = NormalizePosition(particleCoordinate, _OutputTextureSize, _Padding);
+        
+        float particleMass = _InputTexture[particleCoordinate].a;
+        
+        // mass is normalized by total 'mass' (sum of alpha values) so resulting map will always have an
+        // overall mass of 1
+        float2 force = CalculateGravity(normalizedParticleCoordinate, normalizedCoordinate, particleMass / totalMass);
+        
+        float2 diff = normalizedCoordinate - normalizedParticleCoordinate;
+        
+        // prevent us from checking the gravity from a texel to itself.
+        if (dot(diff, diff) > EPSILON)
+        {
+            totalGravityForce += force;
+        }
+    }
+    
+    float leastSqrDist = 10000000.0;
+    float2 closestPoint = float2(0, 0);
+    for (uint j = 0; j < EDGE_PARTICLES_COUNT; j++)
+    {
+        float2 edgePoint = NormalizePosition(_EdgeParticles_StructuredBuffer[j], _OutputTextureSize, _Padding);
+        float2 disp = normalizedCoordinate - edgePoint;
+        
+        float sqrDist = dot(disp, disp);
+        
+        if (sqrDist < EPSILON)
+        {
+            leastSqrDist = 0.0;
+            closestPoint = normalizedCoordinate;
+            break;
+        }
+        else if (sqrDist < leastSqrDist)
+        {
+            leastSqrDist = sqrDist;
+            closestPoint = edgePoint;
+        }
+    }
+    
+    float4 current = _InputTexture[id.xy - _Padding];
+    
+    // prevent errors caused by clamping
+    if (id.x < _Padding || id.y < _Padding)
+        current = float4(0, 0, 0, 0);
+    
+    float signedDist = sqrt(leastSqrDist);
+    
+    // flip distance if inside
+    if (current.a > 0)
+        signedDist *= -1.0;
+    
+    float2 normalizedOutputCoordinate = id.xy / (_OutputTextureSize - 1.0);
+    
+    // we also take note of how much this texel contributes to the centre of mass of the input.
+    // NOTE: the resulting value is not normalized by the total mass. divide the final output by total mass to get the normalized centre of gravity
+    float2 centreOfMassContribution = normalizedOutputCoordinate * current.a;
+
+    // atomic operations can only be applied to integers, so we multiply by a large number and cast it to an int
+    InterlockedAdd(CENTRE_OF_MASS_X, (int) (centreOfMassContribution.x * MULTIPLICATION_FACTOR));
+    InterlockedAdd(CENTRE_OF_MASS_Y, (int) (centreOfMassContribution.y * MULTIPLICATION_FACTOR));
+
+    _OutputTexture[float2(id.x, id.y)] = float4(totalGravityForce * 0.0001, signedDist, 1); // this texture is just for display/debugging, so actual values don't matter
+    _OutputForces[CoordinateToIndex(id.x, id.y)] = float3(totalGravityForce, signedDist);
+
+}
