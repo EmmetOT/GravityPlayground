@@ -89,7 +89,7 @@ void UpdateParticles(uint3 id : SV_DispatchThreadID)
     // todo: cache this? currently calculating both here and in the shader proper
     float currentRadius = particle.CurrentRadius();
     
-    if (particle.Age > 2.0 && signedDistance < currentRadius)
+	if (particle.Age > 0.5 && signedDistance < currentRadius)
     {
         // if particle is inside a gravity body
 

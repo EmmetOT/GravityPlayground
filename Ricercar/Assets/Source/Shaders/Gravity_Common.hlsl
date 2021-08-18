@@ -335,6 +335,9 @@ float3 Map(float2 p)
 
 float2 MapGradient(float2 p)
 {
+	if (_GravityDataCount <= 0)
+		return float2(0, 0);
+    
     const float2 h = float2(0.1, 0);
     return -normalize(float2(Map(p + h.xy).z - Map(p - h.xy).z,
                            Map(p + h.yx).z - Map(p - h.yx).z));

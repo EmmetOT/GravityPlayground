@@ -23,12 +23,14 @@ namespace GravityPlayground.GravityStuff
 
         [SerializeField]
         [HideInInspector]
-        private List<GravityBody> m_bodies = new List<GravityBody>();
+        private List<GravityBody> m_bodies = new();
+
+        public static int BodiesCount => Instance.m_bodies.Count;
 
         [SerializeField]
         [HideInInspector]
         private GravityParticleSystem m_particleSystem;
-        public static GravityParticleSystem ParticleSystem => Instance.m_particleSystem ?? (Instance.m_particleSystem = Instance.GetComponent<GravityParticleSystem>());
+        public static GravityParticleSystem ParticleSystem => Instance.m_particleSystem != null ? Instance.m_particleSystem : (Instance.m_particleSystem = Instance.GetComponent<GravityParticleSystem>());
 
         [SerializeField]
         private float m_gravitationalConstant = 667.4f;
@@ -44,12 +46,12 @@ namespace GravityPlayground.GravityStuff
 
         private bool HasInvalidBuffer => m_dataBuffer == null || !m_dataBuffer.IsValid() || m_complexSamplesBuffer == null || !m_complexSamplesBuffer.IsValid();
 
-        private readonly List<Vector3> m_complexSampleData = new List<Vector3>();
+        private readonly List<Vector3> m_complexSampleData = new();
 
         [SerializeField]
         [HideInInspector]
-        private List<GravityData> m_data = new List<GravityData>();
-        private readonly Dictionary<int, int> m_complexBodyStartIndices = new Dictionary<int, int>();
+        private List<GravityData> m_data = new();
+        private readonly Dictionary<int, int> m_complexBodyStartIndices = new();
 
         private bool m_isSampleDataDirty = true;
         private bool m_isDataDirty = true;
@@ -62,7 +64,7 @@ namespace GravityPlayground.GravityStuff
         private bool m_isEnabled = false;
 
         private bool m_forceUpdateNextFrame = false;
-        
+
         private void OnValidate()
         {
             Shader.SetGlobalFloat(Properties.GravitationalConstant_Float, m_gravitationalConstant);
@@ -89,7 +91,7 @@ namespace GravityPlayground.GravityStuff
             m_isDataDirty = true;
             m_forceUpdateNextFrame = true;
         }
-        
+
         private void OnDisable()
         {
 #if UNITY_EDITOR
@@ -100,10 +102,10 @@ namespace GravityPlayground.GravityStuff
             m_isEnabled = false;
 
             m_dataBuffer?.Dispose();
-            Debug.Log("Disposing complex samples buffer!");
+            Debug.Log("OnDisable: Disposing complex samples buffer!");
             m_complexSamplesBuffer?.Dispose();
         }
-        
+
         public static void Register(GravityBody gravityBody)
         {
             if (!Instance)
@@ -112,7 +114,7 @@ namespace GravityPlayground.GravityStuff
             if (!Instance.m_bodies.Contains(gravityBody))
             {
                 Instance.m_bodies.Add(gravityBody);
-                
+
                 Instance.m_isSampleDataDirty |= gravityBody is ComplexGravityBody;
                 Instance.m_isDataDirty = true;
 
@@ -169,10 +171,34 @@ namespace GravityPlayground.GravityStuff
         {
             const float epsilon = 0.1f;
 
+            if (Instance.m_bodies.Count <= 0)
+                return Vector2.zero;
+
             return -(new Vector2(
                 GetSignedDistance(point + Vector2.right * epsilon, guid) - GetSignedDistance(point - Vector2.right * epsilon, guid),
                 GetSignedDistance(point + Vector2.up * epsilon, guid) - GetSignedDistance(point - Vector2.up * epsilon, guid)))
                 .normalized;
+        }
+
+        public static float GetGravityPolarity(Vector2 point, int guid = -1)
+        {
+            static Vector2 SafeNormalize(Vector2 vec)
+            {
+                if (vec.magnitude <= 0.00001f)
+                    return Vector2.zero;
+
+                return vec.normalized;
+            }
+
+            Vector3 gravityForceAndSignedDistance = GetTotalGravityForceAndSignedDistance(point, guid);
+
+            Vector2 gravityForce = new(gravityForceAndSignedDistance.x, gravityForceAndSignedDistance.y);
+            Vector2 gradient = GetDirectionToSurface(point, guid);
+
+            gravityForce = SafeNormalize(gravityForce);
+            gradient = SafeNormalize(gradient);
+
+            return Vector2.Dot(gravityForce, gradient);
         }
 
         public static Vector2 GetClosestSurfacePoint(Vector2 point, int guid = -1)
@@ -182,10 +208,10 @@ namespace GravityPlayground.GravityStuff
 
             return point + directionToSurface * Mathf.Abs(signedDistance);
         }
-        
+
         public static Vector3 GetTotalGravityForceAndSignedDistance(Vector2 point, int guid = -1)
         {
-            Vector2 gravitySum = new Vector3(0f, 0f);
+            Vector2 gravitySum = new(0f, 0f);
             float minSignedDistance = 1000000f;
 
             for (int i = 0; i < Instance.m_bodies.Count; i++)
@@ -219,11 +245,21 @@ namespace GravityPlayground.GravityStuff
             m_forceUpdateNextFrame = false;
         }
 
+        public void ForceUpdate()
+        {
+            Debug.Log("Force update called.");
+
+            m_isSampleDataDirty = true;
+            m_isDataDirty = true;
+
+            OnDirty();
+        }
+
         private void OnDirty()
         {
             if (!m_isEnabled)
                 return;
-            
+
             if (m_isSampleDataDirty)
             {
                 int previousComplexCount = m_complexSampleData.Count;
@@ -236,7 +272,7 @@ namespace GravityPlayground.GravityStuff
                     if (m_bodies[i] is ComplexGravityBody body && body.Map)
                     {
                         Vector3[] forces = body.Map.Forces;
-                        
+
                         if (!m_complexBodyStartIndices.ContainsKey(body.GUID))
                         {
                             int startIndex = m_complexSampleData.Count;
@@ -249,14 +285,14 @@ namespace GravityPlayground.GravityStuff
                 if (m_complexSamplesBuffer == null || !m_complexSamplesBuffer.IsValid() || previousComplexCount != m_complexSampleData.Count)
                 {
                     m_complexSamplesBuffer?.Dispose();
-                    Debug.Log("Disposing complex samples buffer!");
+                    Debug.Log("OnDirty: Disposing complex samples buffer!");
                     m_complexSamplesBuffer = new ComputeBuffer(Mathf.Max(1, m_complexSampleData.Count), sizeof(float) * 3);
                 }
 
                 if (m_complexSampleData.Count > 0)
                     m_complexSamplesBuffer.SetData(m_complexSampleData);
 
-                Debug.Log("Setting complex samples buffer!");
+                Debug.Log("OnDirty: Setting complex samples buffer!");
                 Shader.SetGlobalBuffer(Properties.ComplexSamples_StructuredBuffer, m_complexSamplesBuffer);
             }
 
@@ -274,7 +310,7 @@ namespace GravityPlayground.GravityStuff
 
                 m_data.Add(data);
             }
-            
+
             if (m_dataBuffer == null || !m_dataBuffer.IsValid() || previousCount != m_data.Count)
             {
                 m_dataBuffer?.Dispose();
@@ -288,11 +324,11 @@ namespace GravityPlayground.GravityStuff
             Shader.SetGlobalInt(Properties.GravityData_Count, m_data.Count);
             Shader.SetGlobalBuffer(Properties.Data_StructuredBuffer, m_dataBuffer);
             Shader.SetGlobalFloat(Properties.GravitationalConstant_Float, m_gravitationalConstant);
-            
+
             m_isSampleDataDirty = false;
             m_isDataDirty = false;
         }
-        
+
         private void OnCompilationStarted(object param)
         {
             m_isEnabled = false;
@@ -305,6 +341,8 @@ namespace GravityPlayground.GravityStuff
 #if UNITY_EDITOR
         private void OnPlayModeStateChanged(PlayModeStateChange stateChange)
         {
+            Debug.Log("Play mode state changed: " + stateChange.ToString());
+
             // this ensures "m_isEnabled" is set to false while transitioning between play modes
             m_isEnabled = stateChange == PlayModeStateChange.EnteredPlayMode || stateChange == PlayModeStateChange.EnteredEditMode;
         }
@@ -316,13 +354,13 @@ namespace GravityPlayground.GravityStuff
                 timeStep = Time.fixedDeltaTime;
 
             Vector3 gravityAndSignedDistance = GetTotalGravityForceAndSignedDistance(pos, guid);
-            Vector3 gravity = new Vector3(gravityAndSignedDistance.x, gravityAndSignedDistance.y, 0f);
+            Vector3 gravity = new(gravityAndSignedDistance.x, gravityAndSignedDistance.y, 0f);
             signedDistance = gravityAndSignedDistance.z;
 
             nextVelocity = velocity + (gravity * timeStep / mass);
             nextPosition = pos + nextVelocity * timeStep;
         }
-        
+
         public static int PredictPositions(Vector3[] positions, Vector3[] velocities, float[] signedDistances, Vector3 initialPosition, Vector3 initialVelocity, float mass, int guid = -1, float timeStep = -1f, bool stopOnCollision = false)
         {
             Debug.Assert(positions.Length == velocities.Length && velocities.Length == signedDistances.Length, "Length of given arrays must be equal.");
@@ -351,9 +389,9 @@ namespace GravityPlayground.GravityStuff
                 count++;
             }
 
-            positions[positions.Length - 1] = position;
-            velocities[velocities.Length - 1] = velocity;
-            signedDistances[signedDistances.Length - 1] = signedDistance;
+            positions[^1] = position;
+            velocities[^1] = velocity;
+            signedDistances[^1] = signedDistance;
             return count;
         }
 

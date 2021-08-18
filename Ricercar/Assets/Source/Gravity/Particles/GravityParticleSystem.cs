@@ -99,7 +99,7 @@ namespace GravityPlayground.GravityStuff
         private static readonly uint[] m_argsBufferInit = new uint[] { 6, 0, 0, 0, 0, 0, 0 };
 
         [SerializeField]
-        private List<Texture2D> m_particleSpriteSequences = new List<Texture2D>();
+        private List<Texture2D> m_particleSpriteSequences = new();
         //private readonly Dictionary<Texture2D, List<int>> m_particleSpriteIndices = new Dictionary<Texture2D, int>();
 
         private void OnEnable()
@@ -129,10 +129,15 @@ namespace GravityPlayground.GravityStuff
             //m_particleSpriteIndices.Clear();
         }
 
+        public int ActiveParticleCount { get; private set; } = 0;
+
         private void FixedUpdate()
         {
             if (!m_initialized)
+            {
+                Debug.Log("not initialized in fixed update.");
                 Init();
+            }
 
             m_activeParticlesThisFrameBuffer.SetCounterValue(0);
 
@@ -146,17 +151,15 @@ namespace GravityPlayground.GravityStuff
             // note: until i have a way to use the sorter with indirect args, this is the best i can do
             m_argsBuffer.GetData(m_argsBufferInit);
 
-            int activeParticleCount = (int)m_argsBufferInit[1];
+            ActiveParticleCount = (int)m_argsBufferInit[1];
 
-            if (activeParticleCount > 1)
+            if (ActiveParticleCount > 1)
             {
                 m_computeShader.GetKernelThreadGroupSizes(m_kernels.CreateParticleSortBuffers, out x, out _, out _);
-                m_computeShader.Dispatch(m_kernels.CreateParticleSortBuffers, Mathf.CeilToInt((float)activeParticleCount / x), 1, 1);
+                m_computeShader.Dispatch(m_kernels.CreateParticleSortBuffers, Mathf.CeilToInt((float)ActiveParticleCount / x), 1, 1);
 
-                using (Sorter sorter = new Sorter(m_sortComputeShader))
-                {
-                    sorter.Sort(m_particleIndexValues, m_particleIndexKeys, reverse: true, activeParticleCount);
-                }
+                using Sorter sorter = new(m_sortComputeShader);
+                sorter.Sort(m_particleIndexValues, m_particleIndexKeys, reverse: true, ActiveParticleCount);
             }
         }
 
@@ -168,10 +171,12 @@ namespace GravityPlayground.GravityStuff
             Graphics.DrawMeshInstancedIndirect(m_particleMesh, 0, m_particleMaterial, new Bounds(Vector3.zero, BOUNDS_EXTENTS), m_argsBuffer);
         }
 
-        private static readonly Vector3 BOUNDS_EXTENTS = new Vector3(100000f, 100000f, 100000f);
+        private static readonly Vector3 BOUNDS_EXTENTS = new(100000f, 100000f, 100000f);
 
         private void Init()
         {
+            Gravity.Instance.ForceUpdate();
+
             m_initialized = true;
 
             for (int i = 0; i < MAX_PARTICLES; i++)
@@ -231,82 +236,6 @@ namespace GravityPlayground.GravityStuff
             m_computeShader.Dispatch(m_kernels.InitializePool, Mathf.CeilToInt((float)MAX_PARTICLES / x), 1, 1);
         }
 
-        //private void OnValidate()
-        //{
-        //    for (int i = 0; i < m_testParticles.Length; i++)
-        //        m_testParticles[i].Validate();
-        //}
-
-        //private Particle GenerateRandomTestParticle(Vector2 position)
-        //{
-        //    if (m_testParticles.IsNullOrEmpty())
-        //        return new Particle();
-
-        //    ParticleConfig config = m_testParticles[Random.Range(0, m_testParticles.Length)];
-
-        //    Particle particle = config.GenerateRandomParticle();
-        //    particle.Position = position;
-
-        //    return particle;
-        //}
-
-        //private Vector3 m_sceneViewMousePosition;
-
-        //#if UNITY_EDITOR
-        //        private void OnScene(SceneView scene)
-        //        {
-        //            if (!m_drawDebugParticlesInSceneView)
-        //                return;
-
-        //            // allows you to right click and spawn particles in the scene view for debug purposes
-
-        //            Event e = Event.current;
-
-        //            Vector3 mousePos = e.mousePosition;
-        //            float ppp = EditorGUIUtility.pixelsPerPoint;
-        //            mousePos.y = scene.camera.pixelHeight - mousePos.y * ppp;
-        //            mousePos.x *= ppp;
-
-        //            Vector3 sceneViewMousePosition = scene.camera.ScreenToWorldPoint(mousePos).SetZ(0f);
-
-        //            if (e.type != EventType.Layout && e.button == 1)
-        //            {
-        //                SpawnParticle(GenerateRandomTestParticle(sceneViewMousePosition));
-
-        //                if (e.type != EventType.Repaint)
-        //                    e.Use();
-        //            }
-        //        }
-        //#endif
-
-        /// <summary>
-        /// Given a sprite, return the index of that sprite in the gravity particle sprite list. If it's a new sprite, add it to the list and return the index.
-        /// This list is used to uniquely store particle sprites and send them to the gpu.
-        /// </summary>
-        //public int GetParticleSpriteIndex(Sprite sprite)
-        //{
-        //    if (!sprite)
-        //        return -1;
-
-        //    Texture2D spriteTex = sprite.texture;
-
-        //    if (m_particleSpriteIndices.TryGetValue(spriteTex, out int startIndex))
-        //        return startIndex;
-
-        //    m_particleSpriteSequences.Add(spriteTex);
-        //    startIndex = m_particleSpriteSequences.Count - 1;
-        //    m_particleSpriteIndices[spriteTex] = startIndex;
-
-        //    Texture2DArray texture2Darray = new Texture2DArray(PARTICLE_SPRITE_SIZE, PARTICLE_SPRITE_SIZE, m_particleSpriteSequences.Count, TextureFormat.DXT5, true);
-
-        //    for (int i = 0; i < m_particleSpriteSequences.Count; i++)
-        //        Graphics.CopyTexture(m_particleSpriteSequences[i], 0, texture2Darray, i);
-
-        //    Shader.SetGlobalTexture(Properties.GravityPartcleSprites_TextureArray, texture2Darray);
-
-        //    return startIndex;
-        //}
-
         /// <summary>
         /// Given an ordered sequence of sprites, either find the index where that sequence starts, or add the sequence to the list and return the start index.
         /// 
@@ -318,13 +247,8 @@ namespace GravityPlayground.GravityStuff
             {
                 Texture2DArray texture2Darray = new Texture2DArray(PARTICLE_SPRITE_SIZE, PARTICLE_SPRITE_SIZE, m_particleSpriteSequences.Count, TextureFormat.DXT5, true);
 
-                //Debug.Log("array format = " + texture2Darray.format);
-
                 for (int i = 0; i < m_particleSpriteSequences.Count; i++)
-                {
-                    //Debug.Log(i + ") " + m_particleSpriteSequences[i].format);
                     Graphics.CopyTexture(m_particleSpriteSequences[i], 0, texture2Darray, i);
-                }
 
                 Shader.SetGlobalTexture(Properties.GravityPartcleSprites_TextureArray, texture2Darray);
             }
@@ -382,35 +306,6 @@ namespace GravityPlayground.GravityStuff
             m_computeShader.Dispatch(m_kernels.AddEmittedParticles, m_emittedParticles.Count, 1, 1);
             m_emittedParticles.Clear();
         }
-
-
-        //public void SpawnParticle(Vector2 position) => SpawnParticle(position, Vector2.zero, 1f, Color.white, 0.5f, 10f);
-        //public void SpawnParticle(Vector2 position, Vector2 velocity) => SpawnParticle(position, velocity, 1f, Color.white, 0.5f, 10f);
-        //public void SpawnParticle(Vector2 position, Vector2 velocity, float mass) => SpawnParticle(position, velocity, mass, Color.white, 0.5f, 10f);
-        //public void SpawnParticle(Vector2 position, Vector2 velocity, float mass, Color colour) => SpawnParticle(position, velocity, mass, colour, 0.5f, 10f);
-        //public void SpawnParticle(Vector2 position, Vector2 velocity, float mass, Color colour, float radius) => SpawnParticle(position, velocity, mass, colour, 0.5f, 10f);
-
-        //public void SpawnParticle(Vector2 position, Vector2 velocity, float mass, Color colour, float radius, float duration)
-        //{
-        //    Debug.Assert(m_emittedParticles.Count < MAX_NEW_PARTICLES_PER_FRAME, "Can't add more than " + MAX_NEW_PARTICLES_PER_FRAME + " particles per frame.");
-
-        //    m_emittedParticles.Add(new Particle()
-        //    {
-        //        Position = position,
-        //        Velocity = velocity,
-        //        Mass = mass,
-        //        Colour = colour,
-        //        Radius = radius,
-        //        Duration = duration
-        //    });
-        //}
-
-        //private void SpawnParticle(ParticleConfig gravityParticle)
-        //{
-        //    Debug.Assert(m_emittedParticles.Count < MAX_NEW_PARTICLES_PER_FRAME, "Can't add more than " + MAX_NEW_PARTICLES_PER_FRAME + " particles per frame.");
-
-        //    m_emittedParticles.Add(gravityParticle.GenerateRandomParticle());
-        //}
 
         public void SpawnParticle(Particle gravityParticle)
         {
@@ -471,113 +366,7 @@ namespace GravityPlayground.GravityStuff
             public int IsAlive;
             public int SortKey;
 
-            public override string ToString()
-            {
-                return Position.ToString("F4");
-            }
+            public override string ToString() => Position.ToString("F4");
         }
-
-        ///// <summary>
-        ///// This class is for describing possible particles, giving a range of possible values for particle radius, mass, duration, and colour.
-        ///// There is also a method for generating a single particle.
-        ///// </summary>
-        //[System.Serializable]
-        //public struct ParticleConfig
-        //{
-        //    [SerializeField]
-        //    private Sprite m_sprite;
-
-        //    [SerializeField]
-        //    private int m_sortKey;
-
-        //    [SerializeField]
-        //    private bool m_rotateToFaceMovementDirection;
-
-        //    [SerializeField]
-        //    [Range(0f, 1f)]
-        //    private float m_bounceChance;
-
-        //    [SerializeField]
-        //    [Min(0f)]
-        //    private float m_startRadius;
-
-        //    [SerializeField]
-        //    [Min(0f)]
-        //    private float m_endRadius;
-
-        //    [SerializeField]
-        //    [Min(0f)]
-        //    private float m_radiusRandomOffset;
-
-        //    [SerializeField]
-        //    private float m_minimumParticleMass;
-
-        //    [SerializeField]
-        //    private float m_maximumParticleMass;
-
-        //    [SerializeField]
-        //    private float m_minimumParticleDuration;
-
-        //    [SerializeField]
-        //    private float m_maximumParticleDuration;
-
-        //    [SerializeField]
-        //    private Gradient m_startColourGradient;
-        //    public Gradient StartColourGradient
-        //    {
-        //        get => m_startColourGradient;
-        //        set => m_startColourGradient = value;
-        //    }
-
-        //    [SerializeField]
-        //    private Gradient m_endColourGradient;
-        //    public Gradient EndColourGradient
-        //    {
-        //        get => m_endColourGradient;
-        //        set => m_endColourGradient = value;
-        //    }
-
-        //    public void Validate()
-        //    {
-        //        if (m_sprite != null && (m_sprite.texture.width != PARTICLE_SPRITE_SIZE || m_sprite.texture.height != PARTICLE_SPRITE_SIZE))
-        //        {
-        //            Debug.LogError("Sprite must be of dimensions (" + PARTICLE_SPRITE_SIZE + ", " + PARTICLE_SPRITE_SIZE + ")");
-        //            m_sprite = null;
-        //        }
-
-        //        if (m_minimumParticleMass > m_maximumParticleMass)
-        //            (m_minimumParticleMass, m_maximumParticleMass) = (m_maximumParticleMass, m_minimumParticleMass);
-
-        //        if (m_minimumParticleDuration > m_maximumParticleDuration)
-        //            (m_minimumParticleDuration, m_maximumParticleDuration) = (m_maximumParticleDuration, m_minimumParticleDuration);
-        //    }
-
-        //    public void SetSprite(Sprite sprite)
-        //    {
-        //        m_sprite = sprite;
-        //    }
-
-        //    public Particle GenerateRandomParticle()
-        //    {
-        //        Validate();
-
-        //        float colEval = Random.Range(0f, 1f);
-
-        //        return new Particle()
-        //        {
-        //            SpriteIndex = Gravity.ParticleSystem.GetParticleSpriteIndex(m_sprite),
-        //            SortKey = m_sortKey * 10000,
-        //            RotateToFaceMovementDirection = m_rotateToFaceMovementDirection ? 1 : 0,
-        //            BounceChance = m_bounceChance,
-        //            Mass = Random.Range(m_minimumParticleMass, m_maximumParticleMass),
-        //            StartColour = m_startColourGradient.Evaluate(colEval),
-        //            EndColour = m_endColourGradient.Evaluate(colEval),
-        //            StartRadius = m_startRadius,
-        //            EndRadius = m_endRadius,
-        //            RadiusRandomOffset = Random.Range(-m_radiusRandomOffset, m_radiusRandomOffset),
-        //            Duration = Random.Range(m_minimumParticleDuration, m_maximumParticleDuration)
-        //        };
-        //    }
-        //}
     }
 }
