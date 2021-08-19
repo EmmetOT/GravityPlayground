@@ -12,9 +12,14 @@ using UnityEditor;
 namespace GravityPlayground.GravityStuff
 {
     [RequireComponent(typeof(Rigidbody2D))]
+    [RequireComponent(typeof(TransformChangeDetector))]
     [ExecuteInEditMode]
     public class GravityForceApplier : MonoBehaviour
     {
+        [SerializeField]
+        [HideInInspector]
+        private TransformChangeDetector m_transformChangeDetector;
+
         [SerializeField]
         [HideInInspector]
         private Rigidbody2D m_rigidbody;
@@ -55,6 +60,20 @@ namespace GravityPlayground.GravityStuff
 
         public float Mass => Rigidbody.mass * (m_hasNegativeMass ? -1 : 1);
 
+        private void SubscribeToOnTransformChanged()
+        {
+            m_transformChangeDetector = gameObject.GetOrAddComponent<TransformChangeDetector>();
+
+            m_transformChangeDetector.OnTransformChange -= OnTransformChanged;
+            m_transformChangeDetector.OnTransformChange += OnTransformChanged;
+        }
+
+        private void OnTransformChanged()
+        {
+            if (m_predictor)
+                m_predictor.Simulate(m_rigidbody.position, Application.isPlaying ? m_rigidbody.velocity : m_initialVelocity, Mass/*, GUID*/);
+        }
+
         public void SetMass(float mass)
         {
             m_hasNegativeMass = mass < 0f;
@@ -77,6 +96,7 @@ namespace GravityPlayground.GravityStuff
             //    m_self.OnMassChanged -= OnMassChanged;
             //    m_self.OnMassChanged += OnMassChanged;
             //}
+            SubscribeToOnTransformChanged();
 
             if (m_predictor || (m_predictor = GetComponent<GravityPathPredictor>()))
             {
@@ -103,11 +123,6 @@ namespace GravityPlayground.GravityStuff
                 m_predictor.Simulate(m_rigidbody.position, Application.isPlaying ? m_rigidbody.velocity : m_initialVelocity, Mass/*, GUID*/);
         }
 
-        private void Update()
-        {
-            if (transform.hasChanged && m_predictor)
-                m_predictor.Simulate(m_rigidbody.position, Application.isPlaying ? m_rigidbody.velocity : m_initialVelocity, Mass/*, GUID*/);
-        }
 
         private void FixedUpdate()
         {

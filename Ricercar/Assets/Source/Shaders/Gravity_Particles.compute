@@ -9,6 +9,7 @@
 
 #define RW_PARTICLE_COUNT_DATA
 #define BOUNCE_AGE_SCALAR 100.0
+#define PARTICLE_COLLISION_GRACE_PERIOD 0.015   // how old particles have to be before collision is checked.
 
 #include "./Gravity_Common.hlsl"
 #include "./Gravity_Particles_Includes.hlsl"
@@ -89,7 +90,7 @@ void UpdateParticles(uint3 id : SV_DispatchThreadID)
     // todo: cache this? currently calculating both here and in the shader proper
     float currentRadius = particle.CurrentRadius();
     
-	if (particle.Age > 0.5 && signedDistance < currentRadius)
+    if (particle.Age >= PARTICLE_COLLISION_GRACE_PERIOD && signedDistance < currentRadius)
     {
         // if particle is inside a gravity body
 

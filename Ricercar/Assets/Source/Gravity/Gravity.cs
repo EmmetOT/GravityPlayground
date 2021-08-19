@@ -102,7 +102,6 @@ namespace GravityPlayground.GravityStuff
             m_isEnabled = false;
 
             m_dataBuffer?.Dispose();
-            Debug.Log("OnDisable: Disposing complex samples buffer!");
             m_complexSamplesBuffer?.Dispose();
         }
 
@@ -233,6 +232,7 @@ namespace GravityPlayground.GravityStuff
 
         private void LateUpdate()
         {
+            bool wasDataDirty = m_isDataDirty;
             for (int i = 0; i < Instance.m_bodies.Count; i++)
             {
                 m_isDataDirty |= Instance.m_bodies[i].IsDirty;
@@ -247,8 +247,6 @@ namespace GravityPlayground.GravityStuff
 
         public void ForceUpdate()
         {
-            Debug.Log("Force update called.");
-
             m_isSampleDataDirty = true;
             m_isDataDirty = true;
 
@@ -285,14 +283,12 @@ namespace GravityPlayground.GravityStuff
                 if (m_complexSamplesBuffer == null || !m_complexSamplesBuffer.IsValid() || previousComplexCount != m_complexSampleData.Count)
                 {
                     m_complexSamplesBuffer?.Dispose();
-                    Debug.Log("OnDirty: Disposing complex samples buffer!");
                     m_complexSamplesBuffer = new ComputeBuffer(Mathf.Max(1, m_complexSampleData.Count), sizeof(float) * 3);
                 }
 
                 if (m_complexSampleData.Count > 0)
                     m_complexSamplesBuffer.SetData(m_complexSampleData);
 
-                Debug.Log("OnDirty: Setting complex samples buffer!");
                 Shader.SetGlobalBuffer(Properties.ComplexSamples_StructuredBuffer, m_complexSamplesBuffer);
             }
 
@@ -320,10 +316,10 @@ namespace GravityPlayground.GravityStuff
             if (m_data.Count > 0)
                 m_dataBuffer.SetData(m_data);
 
-            //Debug.Log("Sending data to buffers.");
-            Shader.SetGlobalInt(Properties.GravityData_Count, m_data.Count);
             Shader.SetGlobalBuffer(Properties.Data_StructuredBuffer, m_dataBuffer);
             Shader.SetGlobalFloat(Properties.GravitationalConstant_Float, m_gravitationalConstant);
+            Shader.SetGlobalFloat(Properties.MaxForce_Float, m_maxForce);
+            Shader.SetGlobalInt(Properties.GravityData_Count, m_data.Count);
 
             m_isSampleDataDirty = false;
             m_isDataDirty = false;
@@ -341,8 +337,6 @@ namespace GravityPlayground.GravityStuff
 #if UNITY_EDITOR
         private void OnPlayModeStateChanged(PlayModeStateChange stateChange)
         {
-            Debug.Log("Play mode state changed: " + stateChange.ToString());
-
             // this ensures "m_isEnabled" is set to false while transitioning between play modes
             m_isEnabled = stateChange == PlayModeStateChange.EnteredPlayMode || stateChange == PlayModeStateChange.EnteredEditMode;
         }

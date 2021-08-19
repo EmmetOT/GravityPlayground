@@ -10,21 +10,6 @@ void GetTotalGravityForceAndSignedDistance_float(in float2 Position, in float Sm
 	GravityForce = forceAndSignedDistance.xy;
 	SignedDistance = forceAndSignedDistance.z;
 	Gradient = MapGradient(Position);
-    
-	if (any(isnan(GravityForce)))
-		GravityForce = float2(0, 0);
-}
-
-float2 safeNormalize(float2 vec)
-{
-	vec = normalize(vec);
-	
-	if (any(isnan(vec)))
-	{
-		return float2(0, 0);
-	}
-	
-	return vec;
 }
 
 void GetGravityPolarity_float(in float2 Gravity, in float2 Gradient, out float Polarity)

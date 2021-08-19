@@ -40,10 +40,8 @@ namespace GravityPlayground.GravityStuff
         [HideInInspector]
         private Vector2Int m_cellsPerSide;
         
-        protected override void Update()
+        private void Update()
         {
-            base.Update();
-
             transform.localScale = new Vector3(transform.localScale.x, transform.localScale.x, transform.localScale.x);
         }
 

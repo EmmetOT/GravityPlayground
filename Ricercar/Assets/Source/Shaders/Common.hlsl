@@ -93,6 +93,17 @@ int not(int a)
     return 1 - a;
 }
 
+float2 safeNormalize(float2 vec)
+{
+    vec = normalize(vec);
+	
+    if (any(isnan(vec)))
+    {
+        return float2(0, 0);
+    }
+	
+    return vec;
+}
 
 // returns square magnitude
 float dot2(float3 v)

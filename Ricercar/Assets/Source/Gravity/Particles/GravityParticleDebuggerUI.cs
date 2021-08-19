@@ -23,7 +23,7 @@ namespace GravityPlayground.GravityStuff
         {
             Color polarityCol = GetPolarityColour(out float polarity);
 
-            m_text.text = $"Particle Count = {Gravity.ParticleSystem.ActiveParticleCount}".AddColour(Color.green) + $"\nBody Count = {Gravity.BodiesCount}".AddColour(Color.red) + $"\nPolarity at Player = {polarity:F2}".AddColour(polarityCol);
+            m_text.text = $"Particle Count = {Gravity.ParticleSystem.ActiveParticleCount}".AddColour(Color.green) + $"\nBody Count = {Gravity.BodiesCount}".AddColour(Color.cyan) + $"\nPolarity at Player = {polarity:F2}".AddColour(polarityCol);
         }
 
         private Color GetPolarityColour(out float polarity)

@@ -4,9 +4,14 @@ using UnityEngine;
 
 namespace GravityPlayground.GravityStuff
 {
+    [RequireComponent(typeof(TransformChangeDetector))]
     [ExecuteInEditMode]
     public abstract class GravityBody : MonoBehaviour
     {
+        [SerializeField]
+        [HideInInspector]
+        private TransformChangeDetector m_transformChangeDetector;
+
         [SerializeField]
         private float m_mass = 0f;
         public float Mass => m_mass;
@@ -20,19 +25,22 @@ namespace GravityPlayground.GravityStuff
         //[ColorUsage(showAlpha: false)]
         private Color m_colour;
         public Color Colour => m_colour;
-        
+
         public bool IsDirty { get; private set; } = false;
 
         public int GUID => gameObject.GetInstanceID();
-        
+
         protected virtual void OnValidate()
         {
+            SubscribeToOnTransformChanged();
+
             OnMassChanged?.Invoke(m_mass);
             SetDirty(true);
         }
 
         protected void OnEnable()
         {
+            SubscribeToOnTransformChanged();
             Gravity.Register(this);
         }
 
@@ -41,11 +49,15 @@ namespace GravityPlayground.GravityStuff
             Gravity.Deregister(this);
         }
 
-        protected virtual void Update()
+        private void SubscribeToOnTransformChanged()
         {
-            if (transform.hasChanged)
-                SetDirty(true);
+            m_transformChangeDetector = gameObject.GetOrAddComponent<TransformChangeDetector>();
+
+            m_transformChangeDetector.OnTransformChange -= OnTransformChanged;
+            m_transformChangeDetector.OnTransformChange += OnTransformChanged;
         }
+
+        private void OnTransformChanged() => SetDirty(true);
 
         public void SetDirty(bool isDirty)
         {

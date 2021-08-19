@@ -219,7 +219,7 @@ float3 GetShellForceAndSignedDistance(float2 p, GravityData data)
         forceMagnitude = (_GravitationalConstant * data.Mass) / sqrMagnitude;
     }
 
-    return float3(normalize(difference) * forceMagnitude, sqrt(sqrMagnitude) - radius /* * length(fwidth(p))*/);
+    return float3(safeNormalize(difference) * forceMagnitude, sqrt(sqrMagnitude) - radius);
 }
 
 float3 GetLineForceAndSignedDistance(float2 p, GravityData data)
@@ -247,7 +247,7 @@ float3 GetLineForceAndSignedDistance(float2 p, GravityData data)
 
 float3 GetForceAndSignedDistance(float2 p, GravityData data)
 {
-    float3 forceAndSignedDistance = 0;
+    float3 forceAndSignedDistance = float3(0, 0, 0);
     
     switch (data.Type)
     {
@@ -263,7 +263,7 @@ float3 GetForceAndSignedDistance(float2 p, GravityData data)
     }
     
     float2 force = forceAndSignedDistance.xy;
-    forceAndSignedDistance.xy = normalize(force) * min(length(force), _MaxForce);
+    forceAndSignedDistance.xy = safeNormalize(force) * min(length(force), _MaxForce);
     
     return forceAndSignedDistance;
 }
