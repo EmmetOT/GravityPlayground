@@ -175,19 +175,6 @@ namespace GravityPlayground.Character
         // called from update loop
         private void UpdateAimInput()
         {
-
-            //var inputLookDir = m_input.Player.Aim.ReadValue<Vector2>();
-
-            //foreach (InputControlScheme scheme in m_input.controlSchemes)
-            //{
-            //    scheme.
-            //}
-
-            //if (m_input.currentControlScheme.Equals("Gamepad"))
-            //    inputLookDir = inputLookDir.normalized;
-            //else
-            //    inputLookDir = (inputLookDir - new Vector2(Screen.width / 2, Screen.height / 2)).normalized;
-
             Vector2 aim;
             if (m_currentAimController == CurrentAimController.Mouse)
             {

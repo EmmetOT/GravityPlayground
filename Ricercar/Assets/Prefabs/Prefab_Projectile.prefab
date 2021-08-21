@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 3843556724236565469}
   - component: {fileID: 3843556724236565443}
   - component: {fileID: 3843556724236565468}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Sprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -114,7 +114,7 @@ GameObject:
   - component: {fileID: 3843556726182851002}
   - component: {fileID: 3843556726182851003}
   - component: {fileID: 5223005034075931928}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Prefab_Projectile
   m_TagString: Untagged
   m_Icon: {fileID: 0}

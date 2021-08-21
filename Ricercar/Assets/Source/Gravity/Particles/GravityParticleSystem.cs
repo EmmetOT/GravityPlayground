@@ -308,6 +308,8 @@ namespace GravityPlayground.GravityStuff
         {
             Debug.Assert(m_emittedParticles.Count < MAX_NEW_PARTICLES_PER_FRAME, "Can't add more than " + MAX_NEW_PARTICLES_PER_FRAME + " particles per frame.");
 
+            Debug.Log("Spawning particle with velocity: " + gravityParticle.Velocity);
+
             m_emittedParticles.Add(gravityParticle);
         }
 

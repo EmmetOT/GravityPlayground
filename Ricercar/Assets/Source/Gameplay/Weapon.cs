@@ -41,6 +41,8 @@ namespace GravityPlayground.Character
 
             velocity = Data.GenerateRandomFiringSpeed() * direction;
 
+            Debug.Log("---> Spawning PROJECTILE with velocity " + velocity);
+
             if (Data.SpawnParticles)
             {
                 int count = Data.GenerateRandomParticleEmissionCount();
