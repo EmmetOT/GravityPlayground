@@ -36,9 +36,17 @@ public partial class @CharacterControllerInputs : IInputActionCollection2, IDisp
                     ""interactions"": """"
                 },
                 {
-                    ""name"": ""Aim"",
+                    ""name"": ""AimMouse"",
                     ""type"": ""Value"",
                     ""id"": ""641f5860-2281-49b1-bb49-efad2cf111c6"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """"
+                },
+                {
+                    ""name"": ""AimGamepad"",
+                    ""type"": ""Value"",
+                    ""id"": ""864d2010-adda-4b9c-a319-bd5d06ece0be"",
                     ""expectedControlType"": ""Vector2"",
                     ""processors"": """",
                     ""interactions"": """"
@@ -162,23 +170,12 @@ public partial class @CharacterControllerInputs : IInputActionCollection2, IDisp
                 },
                 {
                     ""name"": """",
-                    ""id"": ""93ca52b6-edcf-4aa8-93f9-055baf702f6a"",
-                    ""path"": ""<Gamepad>/rightStick"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": ""Gamepad"",
-                    ""action"": ""Aim"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
                     ""id"": ""a78f1cbd-afe3-4e0d-95c8-cdc695cf7014"",
                     ""path"": ""<Mouse>/position"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Keyboard&Mouse"",
-                    ""action"": ""Aim"",
+                    ""action"": ""AimMouse"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -196,11 +193,22 @@ public partial class @CharacterControllerInputs : IInputActionCollection2, IDisp
                 {
                     ""name"": """",
                     ""id"": ""272da413-5fbb-4b8d-b90d-7b7e7270a6a0"",
-                    ""path"": ""<Gamepad>/buttonSouth"",
+                    ""path"": ""<Gamepad>/rightTrigger"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Gamepad"",
                     ""action"": ""Fire"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""6f305658-d911-4c57-b162-baae210d648e"",
+                    ""path"": ""<Gamepad>/rightStick"",
+                    ""interactions"": """",
+                    ""processors"": ""NormalizeVector2"",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""AimGamepad"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -273,7 +281,8 @@ public partial class @CharacterControllerInputs : IInputActionCollection2, IDisp
         // Player
         m_Player = asset.FindActionMap("Player", throwIfNotFound: true);
         m_Player_Move = m_Player.FindAction("Move", throwIfNotFound: true);
-        m_Player_Aim = m_Player.FindAction("Aim", throwIfNotFound: true);
+        m_Player_AimMouse = m_Player.FindAction("AimMouse", throwIfNotFound: true);
+        m_Player_AimGamepad = m_Player.FindAction("AimGamepad", throwIfNotFound: true);
         m_Player_Jump = m_Player.FindAction("Jump", throwIfNotFound: true);
         m_Player_Fire = m_Player.FindAction("Fire", throwIfNotFound: true);
     }
@@ -336,7 +345,8 @@ public partial class @CharacterControllerInputs : IInputActionCollection2, IDisp
     private readonly InputActionMap m_Player;
     private IPlayerActions m_PlayerActionsCallbackInterface;
     private readonly InputAction m_Player_Move;
-    private readonly InputAction m_Player_Aim;
+    private readonly InputAction m_Player_AimMouse;
+    private readonly InputAction m_Player_AimGamepad;
     private readonly InputAction m_Player_Jump;
     private readonly InputAction m_Player_Fire;
     public struct PlayerActions
@@ -344,7 +354,8 @@ public partial class @CharacterControllerInputs : IInputActionCollection2, IDisp
         private @CharacterControllerInputs m_Wrapper;
         public PlayerActions(@CharacterControllerInputs wrapper) { m_Wrapper = wrapper; }
         public InputAction @Move => m_Wrapper.m_Player_Move;
-        public InputAction @Aim => m_Wrapper.m_Player_Aim;
+        public InputAction @AimMouse => m_Wrapper.m_Player_AimMouse;
+        public InputAction @AimGamepad => m_Wrapper.m_Player_AimGamepad;
         public InputAction @Jump => m_Wrapper.m_Player_Jump;
         public InputAction @Fire => m_Wrapper.m_Player_Fire;
         public InputActionMap Get() { return m_Wrapper.m_Player; }
@@ -359,9 +370,12 @@ public partial class @CharacterControllerInputs : IInputActionCollection2, IDisp
                 @Move.started -= m_Wrapper.m_PlayerActionsCallbackInterface.OnMove;
                 @Move.performed -= m_Wrapper.m_PlayerActionsCallbackInterface.OnMove;
                 @Move.canceled -= m_Wrapper.m_PlayerActionsCallbackInterface.OnMove;
-                @Aim.started -= m_Wrapper.m_PlayerActionsCallbackInterface.OnAim;
-                @Aim.performed -= m_Wrapper.m_PlayerActionsCallbackInterface.OnAim;
-                @Aim.canceled -= m_Wrapper.m_PlayerActionsCallbackInterface.OnAim;
+                @AimMouse.started -= m_Wrapper.m_PlayerActionsCallbackInterface.OnAimMouse;
+                @AimMouse.performed -= m_Wrapper.m_PlayerActionsCallbackInterface.OnAimMouse;
+                @AimMouse.canceled -= m_Wrapper.m_PlayerActionsCallbackInterface.OnAimMouse;
+                @AimGamepad.started -= m_Wrapper.m_PlayerActionsCallbackInterface.OnAimGamepad;
+                @AimGamepad.performed -= m_Wrapper.m_PlayerActionsCallbackInterface.OnAimGamepad;
+                @AimGamepad.canceled -= m_Wrapper.m_PlayerActionsCallbackInterface.OnAimGamepad;
                 @Jump.started -= m_Wrapper.m_PlayerActionsCallbackInterface.OnJump;
                 @Jump.performed -= m_Wrapper.m_PlayerActionsCallbackInterface.OnJump;
                 @Jump.canceled -= m_Wrapper.m_PlayerActionsCallbackInterface.OnJump;
@@ -375,9 +389,12 @@ public partial class @CharacterControllerInputs : IInputActionCollection2, IDisp
                 @Move.started += instance.OnMove;
                 @Move.performed += instance.OnMove;
                 @Move.canceled += instance.OnMove;
-                @Aim.started += instance.OnAim;
-                @Aim.performed += instance.OnAim;
-                @Aim.canceled += instance.OnAim;
+                @AimMouse.started += instance.OnAimMouse;
+                @AimMouse.performed += instance.OnAimMouse;
+                @AimMouse.canceled += instance.OnAimMouse;
+                @AimGamepad.started += instance.OnAimGamepad;
+                @AimGamepad.performed += instance.OnAimGamepad;
+                @AimGamepad.canceled += instance.OnAimGamepad;
                 @Jump.started += instance.OnJump;
                 @Jump.performed += instance.OnJump;
                 @Jump.canceled += instance.OnJump;
@@ -436,7 +453,8 @@ public partial class @CharacterControllerInputs : IInputActionCollection2, IDisp
     public interface IPlayerActions
     {
         void OnMove(InputAction.CallbackContext context);
-        void OnAim(InputAction.CallbackContext context);
+        void OnAimMouse(InputAction.CallbackContext context);
+        void OnAimGamepad(InputAction.CallbackContext context);
         void OnJump(InputAction.CallbackContext context);
         void OnFire(InputAction.CallbackContext context);
     }

@@ -134,10 +134,7 @@ namespace GravityPlayground.GravityStuff
         private void FixedUpdate()
         {
             if (!m_initialized)
-            {
-                Debug.Log("not initialized in fixed update.");
                 Init();
-            }
 
             m_activeParticlesThisFrameBuffer.SetCounterValue(0);
 

@@ -14,9 +14,17 @@
                     "interactions": ""
                 },
                 {
-                    "name": "Aim",
+                    "name": "AimMouse",
                     "type": "Value",
                     "id": "641f5860-2281-49b1-bb49-efad2cf111c6",
+                    "expectedControlType": "Vector2",
+                    "processors": "",
+                    "interactions": ""
+                },
+                {
+                    "name": "AimGamepad",
+                    "type": "Value",
+                    "id": "864d2010-adda-4b9c-a319-bd5d06ece0be",
                     "expectedControlType": "Vector2",
                     "processors": "",
                     "interactions": ""
@@ -140,23 +148,12 @@
                 },
                 {
                     "name": "",
-                    "id": "93ca52b6-edcf-4aa8-93f9-055baf702f6a",
-                    "path": "<Gamepad>/rightStick",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "Gamepad",
-                    "action": "Aim",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
                     "id": "a78f1cbd-afe3-4e0d-95c8-cdc695cf7014",
                     "path": "<Mouse>/position",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",
-                    "action": "Aim",
+                    "action": "AimMouse",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -174,11 +171,22 @@
                 {
                     "name": "",
                     "id": "272da413-5fbb-4b8d-b90d-7b7e7270a6a0",
-                    "path": "<Gamepad>/buttonSouth",
+                    "path": "<Gamepad>/rightTrigger",
                     "interactions": "",
                     "processors": "",
                     "groups": "Gamepad",
                     "action": "Fire",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "6f305658-d911-4c57-b162-baae210d648e",
+                    "path": "<Gamepad>/rightStick",
+                    "interactions": "",
+                    "processors": "NormalizeVector2",
+                    "groups": "Gamepad",
+                    "action": "AimGamepad",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

@@ -60,6 +60,10 @@ namespace GravityPlayground.Character
 
         private CharacterControllerInputs m_input;
 
+        private enum CurrentAimController { Mouse, Gamepad }
+
+        private CurrentAimController m_currentAimController = CurrentAimController.Mouse;
+
         private void Reset()
         {
             m_transform = transform;
@@ -81,6 +85,12 @@ namespace GravityPlayground.Character
                 m_input = new CharacterControllerInputs();
 
             m_input.Enable();
+
+            m_input.Player.AimMouse.performed -= OnAimMouseInput;
+            m_input.Player.AimMouse.performed += OnAimMouseInput;
+
+            m_input.Player.AimGamepad.performed -= OnAimGamepadInput;
+            m_input.Player.AimGamepad.performed += OnAimGamepadInput;
 
             m_input.Player.Fire.performed -= OnFireInputDown;
             m_input.Player.Fire.performed += OnFireInputDown;
@@ -165,13 +175,47 @@ namespace GravityPlayground.Character
         // called from update loop
         private void UpdateAimInput()
         {
-            Vector2 val = m_input.Player.Aim.ReadValue<Vector2>();
-            Vector2 target = CameraController.Camera.ScreenToWorldPoint(new Vector3(val.x, val.y, -CameraController.Camera.transform.position.z));
 
-            SetAim((target - (Vector2)m_transform.position).normalized);
+            //var inputLookDir = m_input.Player.Aim.ReadValue<Vector2>();
+
+            //foreach (InputControlScheme scheme in m_input.controlSchemes)
+            //{
+            //    scheme.
+            //}
+
+            //if (m_input.currentControlScheme.Equals("Gamepad"))
+            //    inputLookDir = inputLookDir.normalized;
+            //else
+            //    inputLookDir = (inputLookDir - new Vector2(Screen.width / 2, Screen.height / 2)).normalized;
+
+            Vector2 aim;
+            if (m_currentAimController == CurrentAimController.Mouse)
+            {
+                Vector2 val = m_input.Player.AimMouse.ReadValue<Vector2>();
+                Vector2 target = CameraController.Camera.ScreenToWorldPoint(new Vector3(val.x, val.y, -CameraController.Camera.transform.position.z));
+
+                aim = (target - (Vector2)m_transform.position).normalized;
+            }
+            else
+            {
+                aim = CameraController.Camera.transform.TransformDirection(m_input.Player.AimGamepad.ReadValue<Vector2>());
+            }
+
+            SetAim(aim);
+
         }
 
-        private void OnFireInputDown(InputAction.CallbackContext _)
+        private void OnAimMouseInput(InputAction.CallbackContext context)
+        {
+            m_currentAimController = CurrentAimController.Mouse;
+        }
+
+        private void OnAimGamepadInput(InputAction.CallbackContext context)
+        {
+            m_currentAimController = CurrentAimController.Gamepad;
+        }
+
+        private void OnFireInputDown(InputAction.CallbackContext context)
         {
             m_isFireInputDown = true;
 

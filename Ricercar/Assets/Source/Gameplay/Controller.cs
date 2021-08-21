@@ -404,27 +404,6 @@ namespace GravityPlayground.Character
             m_desiredVelocity = m_movementInput * m_speed;
         }
 
-        //// called from update loop
-        //private void UpdateAimInput()
-        //{
-        //    Vector2 val = m_input.Player.Aim.ReadValue<Vector2>();
-
-        //    //Debug.Log(val);
-            
-        //    Vector2 target = m_cameraController.Camera.ScreenToWorldPoint(new Vector3(val.x, val.y, -m_cameraController.transform.position.z));
-
-        //    m_aimInput = (target - (Vector2)m_transform.position).normalized;
-        //}
-        
-        //private void OnAimSet()
-        //{
-        //    Vector3 cameraTarget = m_transform.position + (Vector3)m_aimInput * m_cameraLookDistance;
-
-        //    m_cameraFocalPoint.position = Vector3.Lerp(m_cameraFocalPoint.position, cameraTarget, m_cameraLookSpeed * Time.smoothDeltaTime);
-
-        //    m_weaponController.SetAim(m_aimInput);
-        //}
-
         #endregion
 
         #region Static Helper Methods
