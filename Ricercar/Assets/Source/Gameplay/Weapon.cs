@@ -35,14 +35,12 @@ namespace GravityPlayground.Character
 
         private const float PARTICLE_SPAWN_OFFSET = 1f;
 
-        public Projectile Fire(Vector2 position, Vector2 direction, out Vector2 velocity)
+        public void Fire(Vector2 position, Vector2 direction, out Vector2 velocity)
         {
             m_fireRateTimer = -Data.FireRate;
 
             velocity = Data.GenerateRandomFiringSpeed() * direction;
-
-            Debug.Log("---> Spawning PROJECTILE with velocity " + velocity);
-
+            
             if (Data.SpawnParticles)
             {
                 int count = Data.GenerateRandomParticleEmissionCount();
@@ -57,7 +55,8 @@ namespace GravityPlayground.Character
                 }
             }
 
-            return ProjectileController.SpawnProjectile(Data.Projectile, position, velocity);
+            if (Data.SpawnProjectiles)
+                ProjectileController.SpawnProjectile(Data.Projectile, position, velocity);
         }
     }
 }

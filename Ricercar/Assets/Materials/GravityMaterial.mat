@@ -109,7 +109,7 @@ Material:
     - _BUILTIN_QueueOffset: 0
     - _Blend: 0
     - _BumpScale: 1
-    - _ColourSmoothing: 1.42
+    - _ColourSmoothing: 0.1
     - _Cull: 2
     - _Cutoff: 0.5
     - _DstBlend: 0
@@ -117,12 +117,14 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
+    - _Max_Wave_Speed: 5
     - _Metallic: 0
+    - _Min_Wave_Speed: 5
     - _OcclusionStrength: 1
     - _QueueControl: 0
     - _QueueOffset: 0
     - _ReceiveShadows: 1
-    - _Smoothing: 0.18
+    - _Smoothing: 0.1
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
@@ -131,13 +133,13 @@ Material:
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:
-    - Color_241C3C07: {r: 0.32156864, g: 0.81960785, b: 0.8627451, a: 1}
+    - Color_241C3C07: {r: 0, g: 0.29803923, b: 1, a: 1}
     - Color_30BB5FDD: {r: 0.32156864, g: 0.81960785, b: 0.8627451, a: 0}
     - Color_6A8A7AAA: {r: 0.8117647, g: 0.36078432, b: 0.21176471, a: 0}
     - Color_6DE4FDCA: {r: 0.5066594, g: 1, b: 0.504717, a: 0}
-    - Color_AD59FB79: {r: 0.8117647, g: 0.36078432, b: 0.20784314, a: 1}
+    - Color_AD59FB79: {r: 1, g: 0, b: 0.07817793, a: 1}
     - Color_D1B0C1A: {r: 0.3555076, g: 0.31679422, b: 0.5943396, a: 1}
-    - Color_D8298C1: {r: 0.16470589, g: 0.16078432, b: 0.33333334, a: 1}
+    - Color_D8298C1: {r: 0, g: 0, b: 0, a: 1}
     - Color_F2879817: {r: 0.16862746, g: 0.16078432, b: 0.32941177, a: 0}
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}

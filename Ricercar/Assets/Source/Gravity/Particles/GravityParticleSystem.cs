@@ -65,16 +65,7 @@ namespace GravityPlayground.GravityStuff
         [SerializeField]
         //[HideInInspector]
         private Material m_particleMaterial;
-
-        [SerializeField]
-        private bool m_drawDebugParticlesInSceneView = false;
-
-        //[Header("Test Stuff")]
-        //[SerializeField]
-        //private ParticleConfig[] m_testParticles;
-
-        private Camera m_camera;
-
+        
         private static readonly Matrix4x4[] m_matrices = new Matrix4x4[MAX_PARTICLES];
         private static readonly int[] m_meshTriangles = { 0, 2, 1, 2, 0, 3 };
         private static readonly Vector3[] m_meshVertices = { -Vector2.one, new Vector2(1f, -1f), Vector2.one, new Vector2(-1f, 1f) };
@@ -213,7 +204,7 @@ namespace GravityPlayground.GravityStuff
 
             m_particleIndexKeys?.Dispose();
             m_particleIndexKeys = new ComputeBuffer(MAX_PARTICLES, sizeof(int));
-        
+
             m_kernels = new Kernels(m_computeShader);
 
             Shader.SetGlobalBuffer(Properties.ParticlesPool_AppendBuffer, m_particlePoolBuffer);
@@ -249,7 +240,7 @@ namespace GravityPlayground.GravityStuff
 
                 Shader.SetGlobalTexture(Properties.GravityPartcleSprites_TextureArray, texture2Darray);
             }
-            
+
             if (spriteSequence.IsNullOrEmpty())
                 return 0;
 
@@ -270,7 +261,7 @@ namespace GravityPlayground.GravityStuff
                         SendSpritesToGPU();
                         return i;
                     }
-                    
+
                     // sequence does not match
                     if (m_particleSpriteSequences[i + j] != spriteSequence[j])
                     {
@@ -293,6 +284,8 @@ namespace GravityPlayground.GravityStuff
             return startIndex;
         }
 
+        public int GetSpriteSequenceStartIndex(params Sprite[] spriteSequence) => GetSpriteSequenceStartIndex(spriteSequence as IList<Sprite>);
+
         private void SpawnNewEmittedParticles()
         {
             if (m_emittedParticles.Count <= 0)
@@ -308,7 +301,7 @@ namespace GravityPlayground.GravityStuff
         {
             Debug.Assert(m_emittedParticles.Count < MAX_NEW_PARTICLES_PER_FRAME, "Can't add more than " + MAX_NEW_PARTICLES_PER_FRAME + " particles per frame.");
 
-            Debug.Log("Spawning particle with velocity: " + gravityParticle.Velocity);
+            //Debug.Log("Spawning particle with velocity: " + gravityParticle.Velocity);
 
             m_emittedParticles.Add(gravityParticle);
         }
@@ -327,6 +320,12 @@ namespace GravityPlayground.GravityStuff
             m_emittedParticlesBuffer?.Dispose();
             m_argsBuffer?.Dispose();
             m_activeParticlesThisFrameBuffer?.Dispose();
+        }
+
+        [ContextMenu("Print Current Particle Count")]
+        private void PrintCurrentParticleCount()
+        {
+            Debug.Log(ActiveParticleCount);
         }
 
         [System.Serializable]

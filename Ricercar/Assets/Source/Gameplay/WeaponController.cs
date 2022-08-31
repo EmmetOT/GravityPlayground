@@ -153,7 +153,7 @@ namespace GravityPlayground.Character
                 if (!m_trajectoryPredictor.enabled)
                     m_trajectoryPredictor.enabled = true;
 
-                m_trajectoryPredictor.Simulate(transform.position, aim * m_weapon.Data.AverageSpeed, m_weapon.Data.Projectile.AverageMass);
+                m_trajectoryPredictor.Simulate(transform.position, aim * m_weapon.Data.AverageSpeed, m_weapon.Data.AverageProjectileMass);
             }
 
         }

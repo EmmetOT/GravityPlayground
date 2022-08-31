@@ -263,9 +263,14 @@ float3 GetForceAndSignedDistance(float2 p, GravityData data)
     }
     
     float2 force = forceAndSignedDistance.xy;
-    forceAndSignedDistance.xy = safeNormalize(force) * min(length(force), _MaxForce);
+    //forceAndSignedDistance.xy = safeNormalize(force) * min(length(force), _MaxForce);
     
-    return forceAndSignedDistance;
+    if (length(force) >= _MaxForce)
+        force = normalize(force) * _MaxForce;
+    
+    //forceAndSignedDistance.xy = force;
+    
+    return float3(force.x, force.y, forceAndSignedDistance.z);
 }
 
 
@@ -333,14 +338,35 @@ float3 Map(float2 p)
     return Map(p, ignore);
 }
 
+float QuickMap(float2 p)
+{
+    float2 force = float2(0, 0);
+    float minDist = 1000000.;
+    
+    if (_GravityDataCount <= 0)
+        return float3(force, minDist);
+    
+    GravityData data = _GravityData[0];
+    float3 forceAndSignedDistance = GetForceAndSignedDistance(p, data);
+    force = forceAndSignedDistance.xy;
+    minDist = forceAndSignedDistance.z;
+    
+    for (int i = 1; i < _GravityDataCount; i++)
+    {
+        GravityData data = _GravityData[i];
+        
+        float3 forceAndSignedDistance = GetForceAndSignedDistance(p, data);
+        force += forceAndSignedDistance.xy;
+        minDist = min(minDist, forceAndSignedDistance.z);
+    }
+    
+    return float2(minDist, minDist);
+}
+
 float2 MapGradient(float2 p)
 {
-	if (_GravityDataCount <= 0)
-		return float2(0, 0);
-    
-    const float2 h = float2(0.1, 0);
-    return -normalize(float2(Map(p + h.xy).z - Map(p - h.xy).z,
-                           Map(p + h.yx).z - Map(p - h.yx).z));
+	const float2 h = float2(1, 0);
+    return -normalize(float2(QuickMap(p + h.xy) - QuickMap(p - h.xy), QuickMap(p + h.yx) - QuickMap(p - h.yx)));
 }
 
 //float3 GetTotalGravityForceAndSignedDistance(float2 p, out float2 gradient)

@@ -144,11 +144,43 @@ namespace GravityPlayground.GravityStuff
             {
                 GravityBody body = Instance.m_bodies[i];
 
-                if (body.enabled && (guid == -1 || body.GUID != guid))
+                if (body.enabled && body.IsValid && (guid == -1 || body.GUID != guid))
                     sum += body.GetGravityForce(point);
             }
 
-            return Vector2.ClampMagnitude(sum, Instance.m_maxForce);
+            if (sum.magnitude >= MaxForce)
+                sum = sum.normalized * MaxForce;
+
+            return sum;
+
+            //return Vector2.ClampMagnitude(sum, Instance.m_maxForce);
+        }
+
+        public static Vector3 GetTotalGravityForceAndSignedDistance(Vector2 point, int guid = -1)
+        {
+            Vector2 gravitySum = Vector2.zero;
+            float minSignedDistance = 1000000f;
+
+            for (int i = 0; i < Instance.m_bodies.Count; i++)
+            {
+                GravityBody body = Instance.m_bodies[i];
+
+                if (body.enabled && body.IsValid && (guid == -1 || body.GUID != guid))
+                {
+                    gravitySum += body.GetGravityForce(point);
+                    minSignedDistance = Mathf.Min(minSignedDistance, body.GetSignedDistance(point));
+                }
+            }
+
+            // clamp force magnitude before returning
+            //gravitySum = Vector2.ClampMagnitude(gravitySum, Instance.m_maxForce);
+
+
+            if (gravitySum.magnitude >= MaxForce)
+                gravitySum = gravitySum.normalized * MaxForce;
+
+
+            return new Vector3(gravitySum.x, gravitySum.y, minSignedDistance);
         }
 
         public static float GetSignedDistance(Vector2 point, int guid = -1)
@@ -159,7 +191,7 @@ namespace GravityPlayground.GravityStuff
             {
                 GravityBody body = Instance.m_bodies[i];
 
-                if (body.enabled && (guid == -1 || body.GUID != guid))
+                if (body.enabled && body.IsValid && (guid == -1 || body.GUID != guid))
                     min = Mathf.Min(min, body.GetSignedDistance(point));
             }
 
@@ -208,33 +240,14 @@ namespace GravityPlayground.GravityStuff
             return point + directionToSurface * Mathf.Abs(signedDistance);
         }
 
-        public static Vector3 GetTotalGravityForceAndSignedDistance(Vector2 point, int guid = -1)
-        {
-            Vector2 gravitySum = new(0f, 0f);
-            float minSignedDistance = 1000000f;
-
-            for (int i = 0; i < Instance.m_bodies.Count; i++)
-            {
-                GravityBody body = Instance.m_bodies[i];
-
-                if (body.enabled && (guid == -1 || body.GUID != guid))
-                {
-                    gravitySum += body.GetGravityForce(point);
-                    minSignedDistance = Mathf.Min(minSignedDistance, body.GetSignedDistance(point));
-                }
-            }
-
-            // clamp force magnitude before returning
-            gravitySum = Vector2.ClampMagnitude(gravitySum, Instance.m_maxForce);
-
-            return new Vector3(gravitySum.x, gravitySum.y, minSignedDistance);
-        }
 
         private void LateUpdate()
         {
-            bool wasDataDirty = m_isDataDirty;
             for (int i = 0; i < Instance.m_bodies.Count; i++)
             {
+                if (!Instance.m_bodies[i].IsValid)
+                    continue;
+
                 m_isDataDirty |= Instance.m_bodies[i].IsDirty;
                 Instance.m_bodies[i].SetDirty(false);
             }
@@ -298,11 +311,20 @@ namespace GravityPlayground.GravityStuff
             for (int i = 0; i < m_bodies.Count; i++)
             {
                 GravityBody body = m_bodies[i];
+
+                if (!body.IsValid)
+                    continue;
+
                 GravityData data = body.GetGPUData();
 
                 // setting the index in the sample list where this data's samples start
                 if (body is ComplexGravityBody)
-                    data.Data_1 = data.Data_1.SetX(m_complexBodyStartIndices[body.GUID]);
+                {
+                    if (m_complexBodyStartIndices.TryGetValue(body.GUID, out int startIndex))
+                        data.Data_1 = data.Data_1.SetX(startIndex);
+                    else
+                        continue;
+                }
 
                 m_data.Add(data);
             }

@@ -15,6 +15,8 @@ namespace GravityPlayground.GravityStuff
         private GravityMap m_map = null;
         public GravityMap Map => m_map;
 
+        public override bool IsValid => m_map != null;
+
         public override Vector2 CentreOfGravity => GetWorldSpaceFromNormalized(m_map.CentreOfGravity);
 
         protected override void OnValidate()
@@ -162,6 +164,9 @@ namespace GravityPlayground.GravityStuff
 
         public override GravityData GetGPUData()
         {
+            if (m_map == null)
+                return new GravityData();
+            
             Vector2 centreOfGravity = GetWorldSpaceFromNormalized(m_map.CentreOfGravity);
 
             return new GravityData()

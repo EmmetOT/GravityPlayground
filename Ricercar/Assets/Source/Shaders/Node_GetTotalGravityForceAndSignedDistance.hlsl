@@ -9,7 +9,7 @@ void GetTotalGravityForceAndSignedDistance_float(in float2 Position, in float Sm
     
 	GravityForce = forceAndSignedDistance.xy;
 	SignedDistance = forceAndSignedDistance.z;
-	Gradient = MapGradient(Position);
+    Gradient = MapGradient(Position);
 }
 
 void GetGravityPolarity_float(in float2 Gravity, in float2 Gradient, out float Polarity)

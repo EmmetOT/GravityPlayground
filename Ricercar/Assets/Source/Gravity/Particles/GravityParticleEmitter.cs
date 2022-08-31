@@ -98,11 +98,12 @@ namespace GravityPlayground.GravityStuff
         private int m_spriteSequenceStartIndex = -1;
 
         private float m_timer = 0f;
+
         private readonly List<GravityParticleSystem.Particle> m_particles = new List<GravityParticleSystem.Particle>();
         
         private void Start()
         {
-            m_timer = m_particleEmissionFrequency;
+            m_timer = -Mathf.Max(0.1f, m_particleEmissionFrequency);
         }
 
         private void Update()
@@ -171,21 +172,5 @@ namespace GravityPlayground.GravityStuff
 
         public void SetRadius(float radius) => m_outerRadius = radius;
         
-//#if UNITY_EDITOR
-//        private void OnDrawGizmosSelected()
-//        {
-//            if (m_outerRadius <= 0f)
-//            {
-//                Gizmos.color = Color.white;
-//                Gizmos.DrawSphere(transform.position, 1f);
-//            }
-//            else
-//            {
-//                Handles.color = Color.white;
-//                Handles.DrawWireDisc(transform.position, Vector3.back, m_outerRadius);
-//            }
-//        }
-//#endif
-
     }
 }

@@ -59,7 +59,9 @@ namespace GravityPlayground.GravityStuff
 
         [SerializeField]
         private Gradient m_endColourGradient;
-        
+
+        public float AverageMass => (m_minimumParticleMass + m_maximumParticleMass) * 0.5f;
+
         public GravityParticleSystem.Particle GenerateParticle(Vector2 pos, Vector2 direction, ref int spriteSequenceStartIndex)
         {
             if (spriteSequenceStartIndex < 0)

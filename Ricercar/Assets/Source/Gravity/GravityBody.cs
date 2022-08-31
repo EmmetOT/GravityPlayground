@@ -26,6 +26,8 @@ namespace GravityPlayground.GravityStuff
         private Color m_colour;
         public Color Colour => m_colour;
 
+        public virtual bool IsValid => true;
+
         public bool IsDirty { get; private set; } = false;
 
         public int GUID => gameObject.GetInstanceID();

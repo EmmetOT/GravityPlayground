@@ -33,8 +33,8 @@ namespace GravityPlayground.Character
 
             float size = data.GenerateRandomSize();
             
-            transform.position = position + velocity.normalized * size * 3f;
-            m_rigidbody.position = position + velocity.normalized * size * 3f;
+            transform.position = position;
+            m_rigidbody.position = position;
             m_rigidbody.velocity = velocity;
 
             m_lifeTime = data.GenerateRandomLifetime();

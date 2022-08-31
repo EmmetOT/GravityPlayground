@@ -529,6 +529,23 @@ float2 ProjectPointOnLineSegment(float2 a, float2 b, float2 p)
     return lerp(a, lerp(b, projectedPoint, pointVecShorterThanDiff), dotGreaterThanZero);
 }
 
+float SmoothIntersection(float d1, float d2, float smoothing)
+{
+    float h = saturate(0.5 - 0.5 * (d2 - d1) / smoothing);
+    
+    return lerp(d2, d1, h) + smoothing * h * (1.0 - h);
+}
+
+
+float SmoothIntersection(float d1, float d2, float4 v1, float4 v2, float dSmoothing, float vSmoothing, out float4 vResult)
+{
+    float dH = saturate(0.5 - 0.5 * (d2 - d1) / dSmoothing);
+    float vH = saturate(0.5 - 0.5 * (d1 - d2) / vSmoothing);
+    
+    vResult = lerp(v2, v1, vH);
+    return lerp(d2, d1, dH) + dSmoothing * dH * (1.0 - dH);
+}
+
 float SmoothMin(float d1, float d2, float smoothing)
 {
     float h = saturate(0.5 + 0.5 * (d2 - d1) / smoothing);

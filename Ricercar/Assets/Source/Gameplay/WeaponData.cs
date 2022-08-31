@@ -15,6 +15,9 @@ namespace GravityPlayground.Character
     public class WeaponData : ScriptableObject
     {
         [field: SerializeField]
+        public bool SpawnProjectiles { get; private set; } = false;
+
+        [field: SerializeField]
         [field: Min(0f)]
         public float FireRate { get; private set; } = 1f;
 
@@ -36,7 +39,21 @@ namespace GravityPlayground.Character
 
         [field: SerializeField]
         public bool HoldToFire { get; private set; } = false;
-        
+
+        public float AverageProjectileMass
+        {
+            get
+            {
+                if (Projectile)
+                    return Projectile.AverageMass;
+
+                if (SpawnParticles)
+                    return ParticleConfig.AverageMass;
+
+                return 0f;
+            }
+        }
+
         [field: SerializeField]
         public ProjectileData Projectile { get; private set; } = null;
 
