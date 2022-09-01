@@ -2,7 +2,7 @@
 
 This is a prototype of a 2D platformer idea I had, with some cool shader magic.
 
-Ricercar (which is an Italian term for a kind of musical composition, meaning “to search out”) was an experimenting in gravity and particles. I wanted to learn about making a 2D character controller, and also experiment with compute shaders. This was the result.
+Ricercar (which is an Italian term for a kind of musical composition, meaning “to search out”) was an experiment in gravity and particles. I wanted to learn about making a 2D character controller, and also experiment with compute shaders. This was the result.
 
 There are a few cool things about Ricercar: the first is that any sprite can be converted into “gravity map” which is sort of like a baked lightmap but for precomputed gravity calculations. The second is a hand-implemented particle system which makes use of this map to spawn massive numbers of sprites, to create effects like smoke or fire. Finally, there’s a fun character controller with a little gun, wheeeee!!
 
